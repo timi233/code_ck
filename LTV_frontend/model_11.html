@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
@@ -23,7 +24,6 @@
     </div>
 
     <script>
-    alert('DEBUG: Running script version 5');
     document.addEventListener('DOMContentLoaded', function() {
         // -----[ 0. Configuration & Authentication ]-----
         const AUTH_APP_URL = 'http://141.147.82.47:3000';
@@ -150,7 +150,7 @@
                     const method = id ? 'PUT' : 'POST';
                     const url = id ? `${LTV_API_BASE_URL}/${id}` : LTV_API_BASE_URL;
                     const rawData = {
-                        id: id, // Include the id for updates
+                        id: id,
                         name: customerName.value.trim(),
                         industry: industry.value.trim(),
                         industryCoefficient: parseFloat(isKeyIndustry.value),
@@ -188,7 +188,7 @@
             async function deleteCustomer(id, name) {
                 if (!confirm(`确定要删除客户 "${name}" 吗？此操作不可恢复。`)) return;
                 try {
-                    await authenticatedFetch(`${LTV_API_BASE_URL}/${id}`, { method: 'DELETE' });
+                    await authenticatedFetch(`${LTV_API_BASE_URL}/${id}`);
                     showStatus(`客户 "${name}" 已被删除。`, 'success');
                     await loadCustomerData();
                     clearForm();
@@ -197,7 +197,30 @@
 
             function renderCustomerTable(customers) {
                 if (!customers || customers.length === 0) { customerTableBody.innerHTML = `<tr><td colspan="6" class="px-6 py-10 text-center text-neutral">暂无客户记录</td></tr>`; return; }
-                customerTableBody.innerHTML = customers.map(customer => { const date = customer.calculation_timestamp ? new Date(customer.calculation_timestamp) : new Date(customer.updatedAt); const formattedDate = date.toLocaleString(); let levelClass = ''; if (customer.finalScore >= 80) levelClass = 'bg-success/10 text-success'; else if (customer.finalScore >= 65) levelClass = 'bg-primary/10 text-primary'; else if (customer.finalScore >= 50) levelClass = 'bg-accent/10 text-accent'; else if (customer.finalScore >= 30) levelClass = 'bg-warning/10 text-warning'; else levelClass = 'bg-neutral/10 text-neutral'; return ` <tr class="hover:bg-gray-50"> <td class="px-6 py-4 whitespace-nowrap"><div class="text-sm font-medium text-dark">${customer.name}</div></td><td class="px-6 py-4 whitespace-nowrap"><div class="text-sm text-neutral">${customer.industry || '-'}</div></td><td class="px-6 py-4 whitespace-nowrap"><div class="text-sm font-medium text-primary">${customer.finalScore ? parseFloat(customer.finalScore).toFixed(2) : 'N/A'}</div></td><td class="px-6 py-4 whitespace-nowrap"><span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${levelClass}">${customer.level || '未计算'}</span></td><td class="px-6 py-4 whitespace-nowrap text-sm text-neutral">${formattedDate}</td><td class="px-6 py-4 whitespace-nowrap text-sm font-medium"> <button class="text-primary hover:text-primary/80 mr-4 load-customer" data-id="${customer.id}"><i class="fa fa-edit mr-1"></i>编辑</button> <button class="text-danger hover:text-danger/80 delete-customer" data-id="${customer.id}" data-name="${customer.name}"><i class="fa fa-trash mr-1"></i>删除</button> </td></tr>`; }).join('');
+                customerTableBody.innerHTML = customers.map(customer => {
+                    const date = new Date(customer.updated_at);
+                    const formattedDate = date.toLocaleString();
+                    const finalScore = parseFloat(customer.ltvValue);
+                    const level = customer.details.calculatedData.level || '未计算';
+                    let levelClass = '';
+                    if (finalScore >= 80) { levelClass = 'bg-success/10 text-success'; }
+                    else if (finalScore >= 65) { levelClass = 'bg-primary/10 text-primary'; }
+                    else if (finalScore >= 50) { levelClass = 'bg-accent/10 text-accent'; }
+                    else if (finalScore >= 30) { levelClass = 'bg-warning/10 text-warning'; }
+                    else { levelClass = 'bg-neutral/10 text-neutral'; }
+
+                    return ` <tr class="hover:bg-gray-50"> 
+                        <td class="px-6 py-4 whitespace-nowrap"><div class="text-sm font-medium text-dark">${customer.customerName}</div></td>
+                        <td class="px-6 py-4 whitespace-nowrap"><div class="text-sm text-neutral">${customer.details.rawData.industry || '-'}</div></td>
+                        <td class="px-6 py-4 whitespace-nowrap"><div class="text-sm font-medium text-primary">${finalScore ? finalScore.toFixed(2) : 'N/A'}</div></td>
+                        <td class="px-6 py-4 whitespace-nowrap"><span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${levelClass}">${level}</span></td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-neutral">${formattedDate}</td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm font-medium"> 
+                            <button class="text-primary hover:text-primary/80 mr-4 load-customer" data-id="${customer.customerId}"><i class="fa fa-edit mr-1"></i>编辑</button> 
+                            <button class="text-danger hover:text-danger/80 delete-customer" data-id="${customer.customerId}" data-name="${customer.customerName}"><i class="fa fa-trash mr-1"></i>删除</button> 
+                        </td>
+                    </tr>`;
+                }).join('');
             }
 
             async function handleTableActions(event) {
@@ -214,7 +237,34 @@
                 if (button.classList.contains('delete-customer')) { const name = button.dataset.name; deleteCustomer(id, name); }
             }
 
-            function loadCustomerForEdit(customer) { clearForm(); customerId.value = customer.id; customerName.value = customer.name; industry.value = customer.industry || ''; isKeyIndustry.value = customer.industryCoefficient; knownPerformance.value = customer.knownPerformance || 0; existingPerformance.value = customer.existingPerformance || 0; futureOpportunity.value = customer.futureOpportunity || 0; document.querySelector(`input[name="hasPurchased"][value="${customer.hasPurchased || 0}"]`).checked = true; industryPosition.value = customer.industryPosition || 0; marketValue.value = customer.marketValue || ''; itInvestmentInput.value = customer.itInvestmentInput || ''; staffSize.value = customer.staffSize || 0; document.querySelector(`input[name="isDigitalPartner"][value="${customer.isDigitalPartner || 0}"]`).checked = true; document.querySelector(`input[name="canReachSenior"][value="${customer.canReachSenior || 0}"]`).checked = true; document.querySelector(`input[name="longTermCooperation"][value="${customer.longTermCooperation || 0}"]`).checked = true; document.querySelector(`input[name="isRecommended"][value="${customer.isRecommended || 0}"]`).checked = true; document.querySelector(`input[name="hasIPGOpportunity"][value="${customer.hasIPGOpportunity || 0}"]`).checked = true; document.querySelector(`input[name="hasABASOpportunity"][value="${customer.hasABASOpportunity || 0}"]`).checked = true; document.querySelector(`input[name="orderGrowthOver20"][value="${customer.orderGrowthOver20 || 0}"]`).checked = true; revenueYear1.value = customer.revenueYear1 || ''; revenueYear2.value = customer.revenueYear2 || ''; revenueYear3.value = customer.revenueYear3 || ''; updateAllScores(); window.scrollTo({ top: 0, behavior: 'smooth' }); }
+            function loadCustomerForEdit(customer) {
+                clearForm();
+                customerId.value = customer.customerId;
+                customerName.value = customer.customerName;
+                industry.value = customer.details.rawData.industry || '';
+                isKeyIndustry.value = customer.details.rawData.industryCoefficient;
+                knownPerformance.value = customer.details.rawData.knownPerformance || 0;
+                existingPerformance.value = customer.details.rawData.existingPerformance || 0;
+                futureOpportunity.value = customer.details.rawData.futureOpportunity || 0;
+                document.querySelector(`input[name="hasPurchased"][value="${customer.details.rawData.hasPurchased || 0}"]`).checked = true;
+                industryPosition.value = customer.details.rawData.industryPosition || 0;
+                marketValue.value = customer.details.rawData.marketValue || '';
+                itInvestmentInput.value = customer.details.rawData.itInvestmentInput || '';
+                staffSize.value = customer.details.rawData.staffSize || 0;
+                document.querySelector(`input[name="isDigitalPartner"][value="${customer.details.rawData.isDigitalPartner || 0}"]`).checked = true;
+                document.querySelector(`input[name="canReachSenior"][value="${customer.details.rawData.canReachSenior || 0}"]`).checked = true;
+                document.querySelector(`input[name="longTermCooperation"][value="${customer.details.rawData.longTermCooperation || 0}"]`).checked = true;
+                document.querySelector(`input[name="isRecommended"][value="${customer.details.rawData.isRecommended || 0}"]`).checked = true;
+                document.querySelector(`input[name="hasIPGOpportunity"][value="${customer.details.rawData.hasIPGOpportunity || 0}"]`).checked = true;
+                document.querySelector(`input[name="hasABASOpportunity"][value="${customer.details.rawData.hasABASOpportunity || 0}"]`).checked = true;
+                document.querySelector(`input[name="orderGrowthOver20"][value="${customer.details.rawData.orderGrowthOver20 || 0}"]`).checked = true;
+                revenueYear1.value = customer.details.rawData.revenueYear1 || '';
+                revenueYear2.value = customer.details.rawData.revenueYear2 || '';
+                revenueYear3.value = customer.details.rawData.revenueYear3 || '';
+                updateAllScores();
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+            }
+
             function clearForm() { const form = document.querySelector('main'); form.querySelectorAll('input[type=text], input[type=number], select').forEach(el => { if(el.type === 'select-one') el.value = '0'; else el.value = ''; }); form.querySelectorAll('input[type=radio][value="0"]').forEach(radio => radio.checked = true); isKeyIndustry.value = '1'; knownPerformance.value = '0'; existingPerformance.value = '0'; futureOpportunity.value = '0'; customerId.value = ''; resultSection.classList.add('hidden'); updateAllScores(); }
             function showStatus(message, type) { saveStatus.textContent = message; saveStatus.className = `mt-4 text-sm flex items-center justify-center ${type === 'success' ? 'text-success' : 'text-danger'}`; saveStatus.innerHTML = `<i class="fa fa-${type === 'success' ? 'check' : 'exclamation'}-circle mr-1"></i> ${message}`; saveStatus.classList.remove('hidden'); setTimeout(() => saveStatus.classList.add('hidden'), 4000); }
             function updateAllScores() { calculateITInvestmentScore(); calculateRevenueGrowth(); calculateFinalScore(); }
@@ -232,15 +282,6 @@
             [itInvestmentInput, revenueYear1, revenueYear2, revenueYear3, knownPerformance, existingPerformance, futureOpportunity, marketValue].forEach(el => el.addEventListener('input', updateAllScores));
             [industryPosition, staffSize, isKeyIndustry].forEach(el => el.addEventListener('change', updateAllScores));
             document.querySelectorAll('input[type="radio"]').forEach(radio => radio.addEventListener('change', updateAllScores));
-
-            loadCustomerData();
-        }
-
-        handleAuthentication();
-    });
-    </script>
-</body>
-</html>        document.querySelectorAll('input[type="radio"]').forEach(radio => radio.addEventListener('change', updateAllScores));
 
             loadCustomerData();
         }
