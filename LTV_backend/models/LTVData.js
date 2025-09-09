@@ -44,7 +44,21 @@ LTVData.init({
   tableName: 'ltv_data',
   timestamps: true,
   createdAt: 'created_at',
-  updatedAt: 'updated_at'
+  updatedAt: 'updated_at',
+  indexes: [
+    {
+      name: 'user_id_index',
+      fields: ['user_id']
+    },
+    {
+      name: 'customer_id_index',
+      fields: ['customer_id']
+    },
+    {
+      name: 'user_customer_id_compound_index',
+      fields: ['user_id', 'customer_id']
+    }
+  ]
 });
 
 module.exports = LTVData;
