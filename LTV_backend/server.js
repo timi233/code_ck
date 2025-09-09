@@ -11,6 +11,18 @@ dotenv.config();
 // Create Express app
 const app = express();
 
+// Force-add CORS headers to every response
+app.use((req, res, next) => {
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+    // Intercept OPTIONS method
+    if (req.method === 'OPTIONS') {
+        return res.sendStatus(200);
+    }
+    next();
+});
+
 // Middleware
 const corsOptions = {
   origin: '*', // In production, you should restrict this to your frontend's domain

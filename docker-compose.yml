@@ -28,7 +28,7 @@ services:
       - DB_USER=app_user
       - DB_PASSWORD=app_password
       - DB_NAME=ltv_db
-      - LTV_PORT=3000
+      - PORT=3000
     depends_on:
       - mysql
     networks:
