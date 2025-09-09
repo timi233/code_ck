@@ -143,41 +143,44 @@
             }
 
             async function handleSaveOrUpdate() {
-                if (!customerName.value.trim()) { alert('请输入客户名称'); customerName.focus(); return; }
-                const id = customerId.value;
-                const method = id ? 'PUT' : 'POST';
-                const url = id ? `${LTV_API_BASE_URL}/${id}` : LTV_API_BASE_URL;
-                const rawData = {
-                    name: customerName.value.trim(),
-                    industry: industry.value.trim(),
-                    industryCoefficient: parseFloat(isKeyIndustry.value),
-                    knownPerformance: parseFloat(knownPerformance.value) || 0,
-                    existingPerformance: parseFloat(existingPerformance.value) || 0,
-                    futureOpportunity: parseFloat(futureOpportunity.value) || 0,
-                    hasPurchased: getRadioValue('hasPurchased'),
-                    industryPosition: parseInt(industryPosition.value) || 0,
-                    marketValue: parseFloat(marketValue.value) || 0,
-                    itInvestmentInput: parseFloat(itInvestmentInput.value) || 0,
-                    staffSize: parseInt(staffSize.value) || 0,
-                    isDigitalPartner: getRadioValue('isDigitalPartner'),
-                    canReachSenior: getRadioValue('canReachSenior'),
-                    longTermCooperation: getRadioValue('longTermCooperation'),
-                    isRecommended: getRadioValue('isRecommended'),
-                    hasIPGOpportunity: getRadioValue('hasIPGOpportunity'),
-                    hasABASOpportunity: getRadioValue('hasABASOpportunity'),
-                    revenueYear1: parseFloat(revenueYear1.value) || 0,
-                    revenueYear2: parseFloat(revenueYear2.value) || 0,
-                    revenueYear3: parseFloat(revenueYear3.value) || 0,
-                    orderGrowthOver20: getRadioValue('orderGrowthOver20'),
-                };
-                const calculatedData = calculateFinalScore();
                 try {
+                    if (!customerName.value.trim()) { alert('请输入客户名称'); customerName.focus(); return; }
+                    const id = customerId.value;
+                    const method = id ? 'PUT' : 'POST';
+                    const url = id ? `${LTV_API_BASE_URL}/${id}` : LTV_API_BASE_URL;
+                    const rawData = {
+                        name: customerName.value.trim(),
+                        industry: industry.value.trim(),
+                        industryCoefficient: parseFloat(isKeyIndustry.value),
+                        knownPerformance: parseFloat(knownPerformance.value) || 0,
+                        existingPerformance: parseFloat(existingPerformance.value) || 0,
+                        futureOpportunity: parseFloat(futureOpportunity.value) || 0,
+                        hasPurchased: getRadioValue('hasPurchased'),
+                        industryPosition: parseInt(industryPosition.value) || 0,
+                        marketValue: parseFloat(marketValue.value) || 0,
+                        itInvestmentInput: parseFloat(itInvestmentInput.value) || 0,
+                        staffSize: parseInt(staffSize.value) || 0,
+                        isDigitalPartner: getRadioValue('isDigitalPartner'),
+                        canReachSenior: getRadioValue('canReachSenior'),
+                        longTermCooperation: getRadioValue('longTermCooperation'),
+                        isRecommended: getRadioValue('isRecommended'),
+                        hasIPGOpportunity: getRadioValue('hasIPGOpportunity'),
+                        hasABASOpportunity: getRadioValue('hasABASOpportunity'),
+                        revenueYear1: parseFloat(revenueYear1.value) || 0,
+                        revenueYear2: parseFloat(revenueYear2.value) || 0,
+                        revenueYear3: parseFloat(revenueYear3.value) || 0,
+                        orderGrowthOver20: getRadioValue('orderGrowthOver20'),
+                    };
+                    const calculatedData = calculateFinalScore();
                     await authenticatedFetch(url, { method: method, body: JSON.stringify({ rawData, calculatedData }) });
                     showStatus(`客户 "${rawData.name}" 已成功${id ? '更新' : '保存'}。`, 'success');
                     resultSection.classList.remove('hidden');
                     resultSection.scrollIntoView({ behavior: 'smooth' });
                     await loadCustomerData();
-                } catch (error) { console.error('Save/Update failed:', error); showStatus(`操作失败: ${error.message}`, 'danger'); }
+                } catch (error) { 
+                    console.error('Save/Update failed:', error);
+                    showStatus(`操作失败: ${error.message}`, 'danger'); 
+                }
             }
 
             async function deleteCustomer(id, name) {

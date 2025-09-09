@@ -4,7 +4,13 @@ const { getLTVData, saveLTVData, getLTVDataByCustomer } = require('../controller
 
 const router = express.Router();
 
-// Apply Feishu token verification middleware to all routes in this router
+// Handle preflight OPTIONS requests
+router.options('*', (req, res) => {
+  // The cors middleware in server.js will handle this
+  res.sendStatus(200);
+});
+
+// Apply Feishu token verification middleware to all subsequent routes in this router
 router.use(verifyFeishuToken);
 
 // GET /ltv - Get LTV data for the authenticated user
