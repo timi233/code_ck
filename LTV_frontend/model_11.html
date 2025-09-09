@@ -206,7 +206,7 @@
                 if (button.classList.contains('load-customer')) {
                     try {
                         const response = await authenticatedFetch(LTV_API_BASE_URL);
-                        const customerToLoad = response.data.find(c => c.id == id);
+                        const customerToLoad = response.data.find(c => c.customerId == id);
                         if (customerToLoad) { loadCustomerForEdit(customerToLoad); }
                     } catch (error) { showStatus(`加载客户失败: ${error.message}`, 'danger'); }
                 }
@@ -231,6 +231,15 @@
             [itInvestmentInput, revenueYear1, revenueYear2, revenueYear3, knownPerformance, existingPerformance, futureOpportunity, marketValue].forEach(el => el.addEventListener('input', updateAllScores));
             [industryPosition, staffSize, isKeyIndustry].forEach(el => el.addEventListener('change', updateAllScores));
             document.querySelectorAll('input[type="radio"]').forEach(radio => radio.addEventListener('change', updateAllScores));
+
+            loadCustomerData();
+        }
+
+        handleAuthentication();
+    });
+    </script>
+</body>
+</html>        document.querySelectorAll('input[type="radio"]').forEach(radio => radio.addEventListener('change', updateAllScores));
 
             loadCustomerData();
         }
