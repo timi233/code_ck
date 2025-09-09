@@ -25,29 +25,46 @@ async function getLTVData(req, res) {
   }
 }
 
-// Save LTV data
+const { v4: uuidv4 } = require('uuid');
+
+// Save or Update LTV data
 async function saveLTVData(req, res) {
   try {
-    const { userId, name } = req.user;
-    const { customerId, customerName, ltvValue, details } = req.body;
-    
-    // Create or update LTV data
-    const ltvData = await LTVData.create({
-      userId,
-      userName: name,
-      customerId,
-      customerName,
-      ltvValue,
+    const { userId, name: userName } = req.user; // User info from token
+    const { rawData, calculatedData } = req.body;
+
+    if (!rawData || !calculatedData) {
+      return res.status(400).json({ success: false, message: 'Invalid data format' });
+    }
+
+    // Use the ID from the form if it exists (for updates), otherwise generate a new UUID for new customers
+    const customerId = rawData.id || uuidv4();
+
+    const ltvRecord = {
+      userId: userId,
+      userName: userName,
+      customerId: customerId,
+      customerName: rawData.name,
+      ltvValue: calculatedData.finalScore,
       calculationDate: new Date(),
-      details
+      details: { rawData, calculatedData } // Store all details in the JSON field
+    };
+
+    // Find if a record already exists for this customer and user
+    const [instance, created] = await LTVData.findOrCreate({
+      where: { customerId: customerId, userId: userId },
+      defaults: ltvRecord
     });
-    
-    res.json({
-      success: true,
-      data: ltvData
-    });
+
+    if (!created) {
+      // If the record was found, update it with the new data
+      await instance.update(ltvRecord);
+    }
+
+    res.status(created ? 201 : 200).json({ success: true, data: instance });
+
   } catch (error) {
-    logger.error('Error saving LTV data:', error);
+    logger.error('Error saving LTV data:', { message: error.message, stack: error.stack });
     res.status(500).json({ 
       success: false, 
       message: 'Internal server error' 

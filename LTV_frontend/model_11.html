@@ -149,6 +149,7 @@
                     const method = id ? 'PUT' : 'POST';
                     const url = id ? `${LTV_API_BASE_URL}/${id}` : LTV_API_BASE_URL;
                     const rawData = {
+                        id: id, // Include the id for updates
                         name: customerName.value.trim(),
                         industry: industry.value.trim(),
                         industryCoefficient: parseFloat(isKeyIndustry.value),
