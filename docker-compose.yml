@@ -1,0 +1,63 @@
+version: '3.8'
+
+services:
+  mysql:
+    image: mysql:8.0
+    container_name: shared_mysql_db
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: a_very_strong_password_123!
+      MYSQL_USER: app_user
+      MYSQL_PASSWORD: app_password
+    ports:
+      - "3307:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+      - ./mysql-init:/docker-entrypoint-initdb.d
+    networks:
+      - app_network
+
+  ltv_backend:
+    build: ./LTV_backend
+    container_name: ltv_backend_service
+    restart: always
+    ports:
+      - "3001:3000"
+    environment:
+      - DB_HOST=mysql
+      - DB_USER=app_user
+      - DB_PASSWORD=app_password
+      - DB_NAME=ltv_db
+      - LTV_PORT=3000
+    depends_on:
+      - mysql
+    networks:
+      - app_network
+
+  auth_backend:
+    build: ./Feishu_Auth/backend
+    container_name: auth_backend_service
+    restart: always
+    ports:
+      - "4001:4000"
+    environment:
+      - DB_HOST=mysql
+      - DB_USER=app_user
+      - DB_PASSWORD=app_password
+      - DB_NAME=feishu_auth
+      - AUTH_PORT=4000
+      # Note: Feishu and JWT secrets should be managed securely, 
+      # potentially via an .env file not checked into git.
+      - FEISHU_APP_ID=cli_a834fb962ef5d00c
+      - FEISHU_APP_SECRET=GSKee5JfXuXBGpDVxW1y7dgmiPW3clO4
+      - JWT_SECRET=5d2a8beb4a1d1b3c9d4e7f5a6b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3f4a5b6c
+    depends_on:
+      - mysql
+    networks:
+      - app_network
+
+volumes:
+  mysql_data:
+
+networks:
+  app_network:

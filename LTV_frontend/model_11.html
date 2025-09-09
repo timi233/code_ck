@@ -1,0 +1,213 @@
+
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>普悦LTV模型（V0.11）- 调试模式</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdn.jsdelivr.net/npm/font-awesome@4.7.0/css/font-awesome.min.css" rel="stylesheet">
+    <script>
+        tailwind.config = { theme: { extend: { colors: { primary: '#165DFF', secondary: '#36CFC9', accent: '#722ED1', neutral: '#86909C', success: '#52C41A', warning: '#FAAD14', danger: '#F5222D', light: '#F2F3F5', dark: '#1D2129' }, fontFamily: { sans: ['Inter', 'system-ui', 'sans-serif'] } } } }
+    </script>
+    <style type="text/tailwindcss">
+        @layer utilities {
+            .card-shadow { box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08); }
+            .input-focus { @apply focus:ring-2 focus:ring-primary/50 focus:border-primary; }
+            #debug-log { position: fixed; bottom: 0; left: 0; width: 100%; background: rgba(0,0,0,0.8); color: white; font-family: monospace; font-size: 12px; max-height: 200px; overflow-y: auto; z-index: 9999; padding: 10px; }
+            #debug-log p { margin: 0; padding: 2px 0; border-bottom: 1px solid #444; }
+        }
+    </style>
+</head>
+<body class="bg-gray-50 min-h-screen font-sans text-dark">
+
+    <div id="main-container">
+        <!-- App content will be rendered here by JavaScript -->
+    </div>
+    <div id="debug-log"></div>
+
+    <script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // -----[ 0. Configuration & Authentication ]-----
+        const AUTH_APP_URL = 'http://141.147.82.47:3000';
+        const LTV_API_BASE_URL = 'http://141.147.82.47:3001/api';
+        const mainContainer = document.getElementById('main-container');
+        const debugLog = document.getElementById('debug-log');
+
+        function log(message) {
+            console.log(message);
+            debugLog.innerHTML += `<p>${new Date().toISOString()}: ${message}</p>`;
+        }
+
+        function handleAuthentication() {
+            log('Step 1: handleAuthentication() called.');
+            let urlToken = null;
+            if (window.location.hash && window.location.hash.startsWith('#token=')) {
+                urlToken = window.location.hash.substring(7); // Grabs the token from after '#token='
+            }
+            log(`Step 2: Checking for token in URL hash. Found: ${!!urlToken}`);
+
+            if (urlToken) {
+                log('Step 3: Token found in URL hash. Saving to localStorage.');
+                localStorage.setItem('jwt_token', urlToken);
+                log('Step 4: Token saved. Cleaning URL.');
+                // Clean the URL by removing the hash
+                window.history.replaceState(null, '', ' '); 
+                log('Step 5: URL cleaned.');
+            }
+
+            const storedToken = localStorage.getItem('jwt_token');
+            log(`Step 6: Checking for token in localStorage. Found: ${!!storedToken}`);
+
+            if (storedToken) {
+                log('Step 7: Token exists. Rendering app structure.');
+                renderAppStructure();
+                log('Step 8: App structure rendered. Initializing app logic.');
+                initializeAppLogic(storedToken);
+                log('Step 9: App logic initialized.');
+            } else {
+                log('Step 10: No token found. Redirecting to auth app.');
+                mainContainer.innerHTML = '<div style="text-align: center; padding-top: 50px; font-family: sans-serif; font-size: 1.2em;">用户未登录，正在跳转到认证页面...</div>';
+                window.location.href = AUTH_APP_URL;
+            }
+        }
+
+        function renderAppStructure() { /* ... same as before ... */ }
+        function initializeAppLogic(token) { /* ... same as before ... */ }
+
+        // --- The rest of the functions are here, I will only show the ones I add logs to ---
+
+        function renderAppStructure() {
+            mainContainer.innerHTML = `
+                <header class="bg-white shadow-sm sticky top-0 z-10">
+                    <div class="container mx-auto px-4 py-6 flex justify-between items-center">
+                        <div class="flex items-center space-x-3">
+                            <i class="fa fa-line-chart text-primary text-3xl"></i>
+                            <h1 class="text-[clamp(1.5rem,3vw,2rem)] font-bold text-dark">普悦LTV模型 <span class="ml-2 text-sm font-normal text-neutral">V0.11</span></h1>
+                        </div>
+                        <div id="user-info" class="flex items-center space-x-3">
+                             <button id="logoutBtn" class="text-danger hover:text-danger/80 text-sm"><i class="fa fa-sign-out mr-1"></i>退出登录</button>
+                        </div>
+                    </div>
+                </header>
+                <main class="container mx-auto px-4 py-8">
+                    <section class="mb-10 bg-white rounded-xl p-6 card-shadow"> <h2 class="text-xl font-semibold mb-4 flex items-center"><i class="fa fa-user-circle text-primary mr-2"></i>客户基本信息</h2> <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4"> <div> <label class="block text-sm font-medium text-neutral mb-1">客户名称 <span class="text-danger">*</span></label> <input type="text" id="customerName" class="w-full px-4 py-2 border border-gray-300 rounded-lg input-focus transition-all" placeholder="请输入客户名称" required> <input type="hidden" id="customerId"> </div><div> <label class="block text-sm font-medium text-neutral mb-1">所属行业</label> <input type="text" id="industry" class="w-full px-4 py-2 border border-gray-300 rounded-lg input-focus transition-all" placeholder="请输入所属行业"> </div><div> <label class="block text-sm font-medium text-neutral mb-1">是否属于公司重点行业</label> <select id="isKeyIndustry" class="w-full px-4 py-2 border border-gray-300 rounded-lg input-focus transition-all"> <option value="1">是</option> <option value="0.7">否</option> </select> </div></div></section>
+                    <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                        <section class="bg-white rounded-xl p-6 card-shadow"> <h2 class="text-xl font-semibold flex items-center mb-6"><i class="fa fa-money text-success mr-2"></i>显性价值</h2> <div class="space-y-5"> <div> <label class="block text-sm font-medium text-neutral mb-1">已知业绩金额（万元）</label> <input type="number" id="knownPerformance" class="w-full px-4 py-2 border border-gray-300 rounded-lg input-focus transition-all" step="0.01" min="0" value="0"> </div><div> <label class="block text-sm font-medium text-neutral mb-1">已有业绩金额（三年内，万元）</label> <input type="number" id="existingPerformance" class="w-full px-4 py-2 border border-gray-300 rounded-lg input-focus transition-all" step="0.01" min="0" value="0"> </div><div> <label class="block text-sm font-medium text-neutral mb-1">未来商机金额（未来三年，万元）</label> <input type="number" id="futureOpportunity" class="w-full px-4 py-2 border border-gray-300 rounded-lg input-focus transition-all" step="0.01" min="0" value="0"> </div><div> <label class="block text-sm font-medium text-neutral mb-1">客户已经购买AB/AS/IPG 500点以上产品</label> <div class="flex space-x-4"> <label class="inline-flex items-center"> <input type="radio" name="hasPurchased" value="30" class="text-primary focus:ring-primary h-4 w-4"> <span class="ml-2">是</span> </label> <label class="inline-flex items-center"> <input type="radio" name="hasPurchased" value="0" class="text-primary focus:ring-primary h-4 w-4" checked> <span class="ml-2">否</span> </label> </div></div><div class="pt-3 border-t border-gray-100"> <div class="flex justify-between items-center mb-1"> <span class="text-sm font-medium">预测业绩金额</span> </div><div id="predictedPerformance" class="text-lg font-semibold">- -</div></div><div class="pt-3 border-t border-gray-100"> <div class="flex justify-between items-center mb-1"> <span class="text-sm font-medium">LTV值</span> </div><div id="ltvValue" class="text-lg font-semibold">- -</div></div><div class="pt-3 border-t border-gray-100"> <div class="flex justify-between items-center mb-1"> <span class="text-sm font-medium">显性价值得分</span> </div><div id="explicitScore" class="text-lg font-semibold text-success">- -</div></div></div></section>
+                        <section class="bg-white rounded-xl p-6 card-shadow"> <h2 class="text-xl font-semibold flex items-center mb-6"><i class="fa fa-eye text-accent mr-2"></i>隐形价值</h2> <div class="space-y-5"> <div> <label class="block text-sm font-medium text-neutral mb-1">行业地位</label> <select id="industryPosition" class="w-full px-4 py-2 border border-gray-300 rounded-lg input-focus transition-all"> <option value="0">请选择</option> <option value="60">中国五百强企业/省级以上政府单位</option> <option value="40">行业前三企业/市政府单位</option> <option value="0">其他</option> </select> </div><div> <label class="block text-sm font-medium text-neutral mb-1">企业市值（亿元）</label> <input type="number" id="marketValue" class="w-full px-4 py-2 border border-gray-300 rounded-lg input-focus transition-all" step="0.01" min="0" placeholder="请输入金额"> <div class="mt-1 text-xs text-neutral"> <span>注：与行业地位得分二选一，取最高值</span> </div></div><div> <label class="block text-sm font-medium text-neutral mb-1">年度IT信息化建设投入（万元）</label> <input type="number" id="itInvestmentInput" class="w-full px-4 py-2 border border-gray-300 rounded-lg input-focus transition-all" step="0.01" min="0" placeholder="请输入金额"> <input type="hidden" id="itInvestment" value="0"> </div><div> <label class="block text-sm font-medium text-neutral mb-1">企业人员规模</label> <select id="staffSize" class="w-full px-4 py-2 border border-gray-300 rounded-lg input-focus transition-all"> <option value="0">请选择</option> <option value="0">不足50人</option> <option value="10">50-100人之间</option> <option value="20">100-500人之间</option> <option value="40">500人以上</option> </select> </div><div> <label class="block text-sm font-medium text-neutral mb-1">战略合作伙伴目标客户</label> <div class="flex space-x-4"> <label class="inline-flex items-center"> <input type="radio" name="isDigitalPartner" value="10" class="text-primary focus:ring-primary h-4 w-4"> <span class="ml-2">是</span> </label> <label class="inline-flex items-center"> <input type="radio" name="isDigitalPartner" value="0" class="text-primary focus:ring-primary h-4 w-4" checked> <span class="ml-2">否</span> </label> </div></div><div> <label class="block text-sm font-medium text-neutral mb-1">是否可以接触高层</label> <div class="flex space-x-4"> <label class="inline-flex items-center"> <input type="radio" name="canReachSenior" value="10" class="text-primary focus:ring-primary h-4 w-4"> <span class="ml-2">是</span> </label> <label class="inline-flex items-center"> <input type="radio" name="canReachSenior" value="0" class="text-primary focus:ring-primary h-4 w-4" checked> <span class="ml-2">否</span> </label> </div></div><div> <label class="block text-sm font-medium text-neutral mb-1">长期合作客户（合作三年以上）</label> <div class="flex space-x-4"> <label class="inline-flex items-center"> <input type="radio" name="longTermCooperation" value="10" class="text-primary focus:ring-primary h-4 w-4"> <span class="ml-2">是</span> </label> <label class="inline-flex items-center"> <input type="radio" name="longTermCooperation" value="0" class="text-primary focus:ring-primary h-4 w-4" checked> <span class="ml-2">否</span> </label> </div></div><div> <label class="block text-sm font-medium text-neutral mb-1">是否可以推荐给其他客户（作为标杆）</label> <div class="flex space-x-4"> <label class="inline-flex items-center"> <input type="radio" name="isRecommended" value="10" class="text-primary focus:ring-primary h-4 w-4"> <span class="ml-2">是</span> </label> <label class="inline-flex items-center"> <input type="radio" name="isRecommended" value="0" class="text-primary focus:ring-primary h-4 w-4" checked> <span class="ml-2">否</span> </label> </div></div><div class="pt-3 border-t border-gray-100"> <div class="flex justify-between items-center mb-1"> <span class="text-sm font-medium">隐形价值得分</span> </div><div id="hiddenScore" class="text-lg font-semibold text-accent">- -</div></div></div></section>
+                        <section class="bg-white rounded-xl p-6 card-shadow"> <h2 class="text-xl font-semibold flex items-center mb-6"><i class="fa fa-rocket text-warning mr-2"></i>成长价值</h2> <div class="space-y-5"> <div> <label class="block text-sm font-medium text-neutral mb-1">客户存在购买IPG 500点位以上商机</label> <div class="flex space-x-4"> <label class="inline-flex items-center"> <input type="radio" name="hasIPGOpportunity" value="20" class="text-primary focus:ring-primary h-4 w-4"> <span class="ml-2">是</span> </label> <label class="inline-flex items-center"> <input type="radio" name="hasIPGOpportunity" value="0" class="text-primary focus:ring-primary h-4 w-4" checked> <span class="ml-2">否</span> </label> </div></div><div> <label class="block text-sm font-medium text-neutral mb-1">客户存在购买AB/AS商机</label> <div class="flex space-x-4"> <label class="inline-flex items-center"> <input type="radio" name="hasABASOpportunity" value="20" class="text-primary focus:ring-primary h-4 w-4"> <span class="ml-2">是</span> </label> <label class="inline-flex items-center"> <input type="radio" name="hasABASOpportunity" value="0" class="text-primary focus:ring-primary h-4 w-4" checked> <span class="ml-2">否</span> </label> </div></div><div> <label class="block text-sm font-medium text-neutral mb-1">近三年营收规模（万元）</label> <div class="grid grid-cols-3 gap-2 mt-2"> <div> <label class="block text-xs text-neutral mb-1">第1年（最早）</label> <input type="number" id="revenueYear1" class="w-full px-3 py-1.5 border border-gray-300 rounded-lg input-focus transition-all text-sm" step="0.01" min="0" placeholder="0"> </div><div> <label class="block text-xs text-neutral mb-1">第2年</label> <input type="number" id="revenueYear2" class="w-full px-3 py-1.5 border border-gray-300 rounded-lg input-focus transition-all text-sm" step="0.01" min="0" placeholder="0"> </div><div> <label class="block text-xs text-neutral mb-1">第3年（最新）</label> <input type="number" id="revenueYear3" class="w-full px-3 py-1.5 border border-gray-300 rounded-lg input-focus transition-all text-sm" step="0.01" min="0" placeholder="0"> </div></div><input type="hidden" id="revenueGrowth" value="0"> </div><div> <label class="block text-sm font-medium text-neutral mb-1">客户的订单数量连续两年增长超过20%</label> <div class="flex space-x-4"> <label class="inline-flex items-center"> <input type="radio" name="orderGrowthOver20" value="20" class="text-primary focus:ring-primary h-4 w-4"> <span class="ml-2">是</span> </label> <label class="inline-flex items-center"> <input type="radio" name="orderGrowthOver20" value="0" class="text-primary focus:ring-primary h-4 w-4" checked> <span class="ml-2">否</span> </label> </div></div><div class="pt-3 border-t border-gray-100"> <div class="flex justify-between items-center mb-1"> <span class="text-sm font-medium">成长价值得分</span> </div><div id="growthScore" class="text-lg font-semibold text-warning">- -</div></div></div></section>
+                    </div>
+                    <div class="mt-10 text-center"> <button id="calculateBtn" class="bg-primary hover:bg-primary/90 text-white px-8 py-3 rounded-lg font-medium transition-all transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-primary/50 focus:ring-offset-2"> <i class="fa fa-calculator mr-2"></i>计算客户综合价值 </button> <button id="clearBtn" class="ml-4 bg-white border border-gray-300 text-neutral hover:bg-gray-50 px-6 py-3 rounded-lg font-medium transition-all"> <i class="fa fa-refresh mr-2"></i>清空表单 </button> </div>
+                    <section id="resultSection" class="mt-10 bg-white rounded-xl p-6 card-shadow hidden"> <h2 class="text-xl font-semibold mb-6 flex items-center"><i class="fa fa-bar-chart text-primary mr-2"></i>客户价值评估结果</h2> <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8"> <div class="bg-light rounded-lg p-5 text-center"> <div class="text-neutral text-sm mb-1">显性价值得分</div><div id="explicitResult" class="text-2xl font-bold text-success">0</div></div><div class="bg-light rounded-lg p-5 text-center"> <div class="text-neutral text-sm mb-1">隐形价值得分</div><div id="hiddenResult" class="text-2xl font-bold text-accent">0</div></div><div class="bg-light rounded-lg p-5 text-center"> <div class="text-neutral text-sm mb-1">成长价值得分</div><div id="growthResult" class="text-2xl font-bold text-warning">0</div></div><div class="bg-light rounded-lg p-5 text-center"> <div class="text-neutral text-sm mb-1">行业属性系数</div><div id="industryCoefficient" class="text-2xl font-bold text-primary">0</div></div></div><div class="text-center py-6 border-y border-gray-100"> <div class="text-neutral text-lg mb-2">客户综合价值得分</div><div id="finalScore" class="text-[clamp(2.5rem,5vw,4rem)] font-bold text-primary">0</div><div id="scoreLevel" class="mt-3 px-4 py-2 inline-block rounded-full text-white font-medium"></div><div id="saveStatus" class="mt-4 text-sm hidden"></div></div></section>
+                    <section class="mt-16 bg-white rounded-xl p-6 card-shadow"> <h2 class="text-xl font-semibold flex items-center mb-6"><i class="fa fa-history text-primary mr-2"></i>历史客户价值记录</h2> <div id="customerList" class="overflow-x-auto"> <table class="min-w-full divide-y divide-gray-200"> <thead class="bg-light"> <tr> <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-neutral uppercase tracking-wider">客户名称</th> <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-neutral uppercase tracking-wider">所属行业</th> <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-neutral uppercase tracking-wider">综合得分</th> <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-neutral uppercase tracking-wider">客户等级</th> <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-neutral uppercase tracking-wider">更新时间</th> <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-neutral uppercase tracking-wider">操作</th> </tr></thead> <tbody id="customerTableBody" class="bg-white divide-y divide-gray-200"></tbody> </table> </div></section>
+                </main>
+                <footer class="bg-white border-t border-gray-200 mt-16"> <div class="container mx-auto px-4 py-6"> <div class="text-center text-neutral text-sm"> <p>普悦LTV模型（V11版本） © 2023</p> </div></div></footer>
+            `;
+        }
+
+        function initializeAppLogic(token) {
+            log('Step A: initializeAppLogic() called.');
+            const logoutBtn = document.getElementById('logoutBtn');
+            logoutBtn.addEventListener('click', () => {
+                localStorage.removeItem('jwt_token');
+                handleAuthentication();
+            });
+
+            const calculateBtn = document.getElementById('calculateBtn');
+            const clearBtn = document.getElementById('clearBtn');
+            const customerTableBody = document.getElementById('customerTableBody');
+            const customerId = document.getElementById('customerId');
+            const customerName = document.getElementById('customerName');
+            const industry = document.getElementById('industry');
+            const isKeyIndustry = document.getElementById('isKeyIndustry');
+            const knownPerformance = document.getElementById('knownPerformance');
+            const existingPerformance = document.getElementById('existingPerformance');
+            const futureOpportunity = document.getElementById('futureOpportunity');
+            const industryPosition = document.getElementById('industryPosition');
+            const marketValue = document.getElementById('marketValue');
+            const itInvestmentInput = document.getElementById('itInvestmentInput');
+            const itInvestment = document.getElementById('itInvestment');
+            const staffSize = document.getElementById('staffSize');
+            const revenueYear1 = document.getElementById('revenueYear1');
+            const revenueYear2 = document.getElementById('revenueYear2');
+            const revenueYear3 = document.getElementById('revenueYear3');
+            const revenueGrowth = document.getElementById('revenueGrowth');
+            const predictedPerformance = document.getElementById('predictedPerformance');
+            const ltvValue = document.getElementById('ltvValue');
+            const explicitScoreEl = document.getElementById('explicitScore');
+            const hiddenScoreEl = document.getElementById('hiddenScore');
+            const growthScoreEl = document.getElementById('growthScore');
+            const explicitResult = document.getElementById('explicitResult');
+            const hiddenResult = document.getElementById('hiddenResult');
+            const growthResult = document.getElementById('growthResult');
+            const industryCoefficient = document.getElementById('industryCoefficient');
+            const finalScore = document.getElementById('finalScore');
+            const scoreLevel = document.getElementById('scoreLevel');
+            const resultSection = document.getElementById('resultSection');
+            const saveStatus = document.getElementById('saveStatus');
+
+            async function authenticatedFetch(url, options = {}) {
+                const currentToken = localStorage.getItem('jwt_token');
+                if (!currentToken) { logoutBtn.click(); throw new Error('用户未登录'); }
+                const headers = { 'Content-Type': 'application/json', 'Authorization': `Bearer ${currentToken}`, ...options.headers };
+                const response = await fetch(url, { ...options, headers });
+                if (response.status === 401) { logoutBtn.click(); throw new Error('认证失败或已过期，请重新登录。'); }
+                if (!response.ok) { const errorData = await response.json().catch(() => ({ message: `HTTP error! status: ${response.status}` })); throw new Error(errorData.message || '请求失败'); }
+                if (response.status === 204) return;
+                return response.json();
+            }
+
+            async function loadCustomerData() {
+                try {
+                    const result = await authenticatedFetch(`${LTV_API_BASE_URL}/customers`);
+                    renderCustomerTable(result.data);
+                } catch (error) { showStatus(`加载客户数据失败: ${error.message}`, 'danger'); }
+            }
+
+            async function handleSaveOrUpdate() { /* ... full implementation ... */ }
+            async function deleteCustomer(id, name) { /* ... full implementation ... */ }
+            function renderCustomerTable(customers) { /* ... full implementation ... */ }
+            async function handleTableActions(event) { /* ... full implementation ... */ }
+            function loadCustomerForEdit(customer) { /* ... full implementation ... */ }
+            function clearForm() { /* ... full implementation ... */ }
+            function showStatus(message, type) { /* ... full implementation ... */ }
+            function updateAllScores() { /* ... full implementation ... */ }
+            function calculateFinalScore() { /* ... full implementation ... */ }
+            function updateExplicitMetrics() { /* ... full implementation ... */ }
+            function calculateITInvestmentScore() { /* ... full implementation ... */ }
+            function calculateRevenueGrowth() { /* ... full implementation ... */ }
+            function calculateHiddenScore() { /* ... full implementation ... */ }
+            function calculateGrowthScore() { /* ... full implementation ... */ }
+
+            // Re-add the original implementations for all functions here
+            function handleSaveOrUpdate() { if (!customerName.value.trim()) { alert('请输入客户名称'); customerName.focus(); return; } const id = customerId.value; const method = id ? 'PUT' : 'POST'; const url = id ? `${LTV_API_BASE_URL}/customers/${id}` : `${LTV_API_BASE_URL}/customers`; const rawData = { name: customerName.value.trim(), industry: industry.value.trim(), industryCoefficient: parseFloat(isKeyIndustry.value), knownPerformance: parseFloat(knownPerformance.value) || 0, existingPerformance: parseFloat(existingPerformance.value) || 0, futureOpportunity: parseFloat(futureOpportunity.value) || 0, hasPurchased: parseInt(document.querySelector('input[name="hasPurchased"]:checked').value) || 0, industryPosition: parseInt(industryPosition.value) || 0, marketValue: parseFloat(marketValue.value) || 0, itInvestmentInput: parseFloat(itInvestmentInput.value) || 0, staffSize: parseInt(staffSize.value) || 0, isDigitalPartner: parseInt(document.querySelector('input[name="isDigitalPartner"]:checked').value) || 0, canReachSenior: parseInt(document.querySelector('input[name="canReachSenior"]:checked').value) || 0, longTermCooperation: parseInt(document.querySelector('input[name="longTermCooperation"]:checked').value) || 0, isRecommended: parseInt(document.querySelector('input[name="isRecommended"]:checked').value) || 0, hasIPGOpportunity: parseInt(document.querySelector('input[name="hasIPGOpportunity"]:checked').value) || 0, hasABASOpportunity: parseInt(document.querySelector('input[name="hasABASOpportunity"]:checked').value) || 0, revenueYear1: parseFloat(revenueYear1.value) || 0, revenueYear2: parseFloat(revenueYear2.value) || 0, revenueYear3: parseFloat(revenueYear3.value) || 0, orderGrowthOver20: parseInt(document.querySelector('input[name="orderGrowthOver20"]:checked').value) || 0, }; const calculatedData = calculateFinalScore(); try { authenticatedFetch(url, { method: method, body: JSON.stringify({ rawData, calculatedData }) }).then(() => { showStatus(`客户 "${rawData.name}" 已成功${id ? '更新' : '保存'}。`, 'success'); resultSection.classList.remove('hidden'); resultSection.scrollIntoView({ behavior: 'smooth' }); loadCustomerData(); }); } catch (error) { console.error('Save/Update failed:', error); showStatus(`操作失败: ${error.message}`, 'danger'); } }
+            function deleteCustomer(id, name) { if (!confirm(`确定要删除客户 "${name}" 吗？此操作不可恢复。`)) return; authenticatedFetch(`${LTV_API_BASE_URL}/customers/${id}`, { method: 'DELETE' }).then(() => { showStatus(`客户 "${name}" 已被删除。`, 'success'); loadCustomerData(); clearForm(); }).catch(error => { console.error('Delete failed:', error); showStatus(`删除失败: ${error.message}`, 'danger'); }); }
+            function renderCustomerTable(customers) { if (!customers || customers.length === 0) { customerTableBody.innerHTML = `<tr><td colspan="6" class="px-6 py-10 text-center text-neutral">暂无客户记录</td></tr>`; return; } customerTableBody.innerHTML = customers.map(customer => { const date = customer.calculation_timestamp ? new Date(customer.calculation_timestamp) : new Date(customer.updatedAt); const formattedDate = date.toLocaleString(); let levelClass = ''; if (customer.finalScore >= 80) levelClass = 'bg-success/10 text-success'; else if (customer.finalScore >= 65) levelClass = 'bg-primary/10 text-primary'; else if (customer.finalScore >= 50) levelClass = 'bg-accent/10 text-accent'; else if (customer.finalScore >= 30) levelClass = 'bg-warning/10 text-warning'; else levelClass = 'bg-neutral/10 text-neutral'; return ` <tr class="hover:bg-gray-50"> <td class="px-6 py-4 whitespace-nowrap"><div class="text-sm font-medium text-dark">${customer.name}</div></td><td class="px-6 py-4 whitespace-nowrap"><div class="text-sm text-neutral">${customer.industry || '-'}</div></td><td class="px-6 py-4 whitespace-nowrap"><div class="text-sm font-medium text-primary">${customer.finalScore ? parseFloat(customer.finalScore).toFixed(2) : 'N/A'}</div></td><td class="px-6 py-4 whitespace-nowrap"><span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${levelClass}">${customer.level || '未计算'}</span></td><td class="px-6 py-4 whitespace-nowrap text-sm text-neutral">${formattedDate}</td><td class="px-6 py-4 whitespace-nowrap text-sm font-medium"> <button class="text-primary hover:text-primary/80 mr-4 load-customer" data-id="${customer.id}"><i class="fa fa-edit mr-1"></i>编辑</button> <button class="text-danger hover:text-danger/80 delete-customer" data-id="${customer.id}" data-name="${customer.name}"><i class="fa fa-trash mr-1"></i>删除</button> </td></tr>`; }).join(''); }
+            function handleTableActions(event) { const button = event.target.closest('button'); if (!button) return; const id = button.dataset.id; if (button.classList.contains('load-customer')) { authenticatedFetch(`${LTV_API_BASE_URL}/customers`).then(response => { const customerToLoad = response.data.find(c => c.id == id); if (customerToLoad) { loadCustomerForEdit(customerToLoad); } }).catch(error => { showStatus(`加载客户失败: ${error.message}`, 'danger'); }); } if (button.classList.contains('delete-customer')) { const name = button.dataset.name; deleteCustomer(id, name); } }
+            function loadCustomerForEdit(customer) { clearForm(); customerId.value = customer.id; customerName.value = customer.name; industry.value = customer.industry || ''; isKeyIndustry.value = customer.industryCoefficient; knownPerformance.value = customer.knownPerformance || 0; existingPerformance.value = customer.existingPerformance || 0; futureOpportunity.value = customer.futureOpportunity || 0; document.querySelector(`input[name="hasPurchased"][value="${customer.hasPurchased || 0}"]`).checked = true; industryPosition.value = customer.industryPosition || 0; marketValue.value = customer.marketValue || ''; itInvestmentInput.value = customer.itInvestmentInput || ''; staffSize.value = customer.staffSize || 0; document.querySelector(`input[name="isDigitalPartner"][value="${customer.isDigitalPartner || 0}"]`).checked = true; document.querySelector(`input[name="canReachSenior"][value="${customer.canReachSenior || 0}"]`).checked = true; document.querySelector(`input[name="longTermCooperation"][value="${customer.longTermCooperation || 0}"]`).checked = true; document.querySelector(`input[name="isRecommended"][value="${customer.isRecommended || 0}"]`).checked = true; document.querySelector(`input[name="hasIPGOpportunity"][value="${customer.hasIPGOpportunity || 0}"]`).checked = true; document.querySelector(`input[name="hasABASOpportunity"][value="${customer.hasABASOpportunity || 0}"]`).checked = true; document.querySelector(`input[name="orderGrowthOver20"][value="${customer.orderGrowthOver20 || 0}"]`).checked = true; revenueYear1.value = customer.revenueYear1 || ''; revenueYear2.value = customer.revenueYear2 || ''; revenueYear3.value = customer.revenueYear3 || ''; updateAllScores(); window.scrollTo({ top: 0, behavior: 'smooth' }); }
+            function clearForm() { const form = document.querySelector('main'); form.querySelectorAll('input[type=text], input[type=number], select').forEach(el => { if(el.type === 'select-one') el.value = '0'; else el.value = ''; }); form.querySelectorAll('input[type=radio][value="0"]').forEach(radio => radio.checked = true); isKeyIndustry.value = '1'; knownPerformance.value = '0'; existingPerformance.value = '0'; futureOpportunity.value = '0'; customerId.value = ''; resultSection.classList.add('hidden'); updateAllScores(); }
+            function showStatus(message, type) { saveStatus.textContent = message; saveStatus.className = `mt-4 text-sm flex items-center justify-center ${type === 'success' ? 'text-success' : 'text-danger'}`; saveStatus.innerHTML = `<i class="fa fa-${type === 'success' ? 'check' : 'exclamation'}-circle mr-1"></i> ${message}`; saveStatus.classList.remove('hidden'); setTimeout(() => saveStatus.classList.add('hidden'), 4000); }
+            function updateAllScores() { calculateITInvestmentScore(); calculateRevenueGrowth(); calculateFinalScore(); }
+            function calculateFinalScore() { const explicit = updateExplicitMetrics(); const hidden = calculateHiddenScore(); const growth = calculateGrowthScore(); const industryCoeff = parseFloat(isKeyIndustry.value); const weightedScore = (explicit * 0.40) + (hidden * 0.40) + (growth * 0.20); const final = weightedScore * industryCoeff; let levelText, levelColor; if (final >= 80) { levelText = '优质客户'; levelColor = 'bg-success'; } else if (final >= 65) { levelText = '高价值客户'; levelColor = 'bg-primary'; } else if (final >= 50) { levelText = '中等价值客户'; levelColor = 'bg-accent'; } else if (final >= 30) { levelText = '潜力客户'; levelColor = 'bg-warning'; } else { levelText = '低价值客户'; levelColor = 'bg-neutral'; } explicitResult.textContent = explicit; hiddenResult.textContent = hidden; growthResult.textContent = growth; industryCoefficient.textContent = industryCoeff; finalScore.textContent = final.toFixed(2); scoreLevel.textContent = levelText; scoreLevel.className = `mt-3 px-4 py-2 inline-block rounded-full text-white font-medium ${levelColor}`; return { explicitScore: explicit, hiddenScore: hidden, growthScore: growth, finalScore: final, level: levelText, modelVersion: 'V11' }; }
+            function updateExplicitMetrics() { const existing = parseFloat(existingPerformance.value) || 0; const future = parseFloat(futureOpportunity.value) || 0; const known = parseFloat(knownPerformance.value) || 0; const purchased = parseInt(document.querySelector('input[name="hasPurchased"]:checked').value) || 0; const predicted = (existing * 0.5) + (future * 0.2); const ltv = known + predicted; predictedPerformance.textContent = predicted.toFixed(2) + ' 万元'; ltvValue.textContent = ltv.toFixed(2) + ' 万元'; let score = 0; if (ltv > 0) { score = Math.min(100, Math.round((ltv / 200) * 100)); } score += purchased; explicitScoreEl.textContent = score; return score; }
+            function calculateITInvestmentScore() { const investment = parseFloat(itInvestmentInput.value) || 0; let score = 0; if (investment >= 50 && investment < 100) score = 10; else if (investment >= 100) score = 20; itInvestment.value = score; }
+            function calculateRevenueGrowth() { const year1 = parseFloat(revenueYear1.value) || 0; const year3 = parseFloat(revenueYear3.value) || 0; let score = 0; if (year1 > 0 && year3 > 0) { const growthRate = Math.pow(year3 / year1, 1 / 2) - 1; if (growthRate < 0) score = -20; else if (growthRate >= 0.2) score = 20; else if (growthRate > 0) score = 10; } revenueGrowth.value = score; }
+            function calculateHiddenScore() { const position = parseInt(industryPosition.value) || 0; const marketVal = parseFloat(marketValue.value) || 0; const marketValueScore = marketVal > 200 ? 20 : 0; const positionOrMarketScore = Math.max(position, marketValueScore); const investment = parseInt(itInvestment.value) || 0; const staff = parseInt(staffSize.value) || 0; const digitalPartner = parseInt(document.querySelector('input[name="isDigitalPartner"]:checked').value) || 0; const reachSenior = parseInt(document.querySelector('input[name="canReachSenior"]:checked').value) || 0; const longTerm = parseInt(document.querySelector('input[name="longTermCooperation"]:checked').value) || 0; const recommended = parseInt(document.querySelector('input[name="isRecommended"]:checked').value) || 0; const total = positionOrMarketScore + investment + staff + digitalPartner + reachSenior + longTerm + recommended; hiddenScoreEl.textContent = total; return total; }
+            function calculateGrowthScore() { const ipg = parseInt(document.querySelector('input[name="hasIPGOpportunity"]:checked').value) || 0; const abas = parseInt(document.querySelector('input[name="hasABASOpportunity"]:checked').value) || 0; const revenue = parseInt(revenueGrowth.value) || 0; const orderGrowth = parseInt(document.querySelector('input[name="orderGrowthOver20"]:checked').value) || 0; const total = ipg + abas + revenue + orderGrowth; growthScoreEl.textContent = total; return total; }
+
+            // Initial setup
+            calculateBtn.addEventListener('click', handleSaveOrUpdate);
+            clearBtn.addEventListener('click', clearForm);
+            customerTableBody.addEventListener('click', handleTableActions);
+            [itInvestmentInput, revenueYear1, revenueYear2, revenueYear3, knownPerformance, existingPerformance, futureOpportunity, marketValue].forEach(el => el.addEventListener('input', updateAllScores));
+            [industryPosition, staffSize, isKeyIndustry].forEach(el => el.addEventListener('change', updateAllScores));
+            document.querySelectorAll('input[type="radio"]').forEach(radio => radio.addEventListener('change', updateAllScores));
+
+            loadCustomerData();
+        }
+
+        handleAuthentication();
+    });
+    </script>
+</body>
+</html>

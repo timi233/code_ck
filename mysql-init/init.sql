@@ -1,0 +1,5 @@
+CREATE DATABASE IF NOT EXISTS ltv_db;
+CREATE DATABASE IF NOT EXISTS feishu_auth;
+GRANT ALL PRIVILEGES ON `ltv_db`.* TO 'app_user'@'%';
+GRANT ALL PRIVILEGES ON `feishu_auth`.* TO 'app_user'@'%';
+FLUSH PRIVILEGES;
